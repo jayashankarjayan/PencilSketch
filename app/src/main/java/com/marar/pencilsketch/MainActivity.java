@@ -35,12 +35,15 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int PICK_IMAGE = 1;
     private static final int REQUEST_READ_EXTERNAL_STORAGE = 2;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 3;
+    private static final int REQUEST_ACCESS_MEDIA_LOCATION = 4;
     Mat image = null;
     Button select_image_button;
     ConstraintLayout constraintLayout;
@@ -86,13 +89,61 @@ public class MainActivity extends AppCompatActivity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PICK_IMAGE) {
-            Log.d("Intent Data", data.getData().getScheme() + "");
             Uri uri = data.getData();
+            String file_path = null;
 
-            String file_path = getPathFromUri(getApplicationContext(), uri);
+            if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.Q){
+//                boolean conversion_done = performConversion(file_path);
+                if(isExternalStorageDocument(uri)) {
+                    file_path = getFilePath(uri);
+                    performConversion(file_path);
+                }
+                else{
+                    file_path = getPathFromUri(getApplicationContext(), uri);
+                    performConversion(file_path);
+                }
+            }
+            else{
+                if(isExternalStorageDocument(uri)) {
+                    file_path = getFilePath(uri);
+                    performConversion(file_path);
+                }
+                else{
+                    file_path = getPathFromUri(getApplicationContext(), uri);
+                    performConversion(file_path);
+                }
+//                boolean conversion_done = performConversion(file_path);
+            }
+//
+//            if(file_path == null){
+//                file_path = uri.getPath();
+//                Log.d("PATH VALID", Files.exists(Paths.get(file_path))  + "");
+//            }
+            final String relativeLocation = Environment.DIRECTORY_DCIM + File.separator + getApplicationContext().getResources().getString(R.string.app_name);
+            Log.d("APP FOLDER", relativeLocation);
 
-            boolean conversion_done = performConversion(file_path);
         }
+    }
+
+    private String getFilePath(Uri uri) {
+        String complete_path;
+        Cursor cursor = null;
+        try {
+            String[] proj = { MediaStore.Images.Media.DOCUMENT_ID };
+            cursor = getApplicationContext().getContentResolver().query(uri,  proj, null, null, null);
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DOCUMENT_ID);
+            cursor.moveToFirst();
+
+            String file_path = cursor.getString(column_index).replace(":", File.separator);
+
+            complete_path = Environment.getStorageDirectory().getAbsolutePath() + File.separator + file_path;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return complete_path;
     }
 
     @Override
@@ -101,7 +152,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
             Log.d("TAG", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_4_0, this, mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
         } else {
             Log.d("TAG", "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
@@ -123,15 +174,28 @@ public class MainActivity extends AppCompatActivity {
         }
 
         int writePermissionCheck = ContextCompat.checkSelfPermission(
-                this, Manifest.permission.READ_EXTERNAL_STORAGE);
+                this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
         if (writePermissionCheck != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 showExplanation("Permission Needed", "The application needs access to your phone storage to function properly", Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_WRITE_EXTERNAL_STORAGE);
             } else {
                 ActivityCompat.requestPermissions(MainActivity.this,
                         new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_EXTERNAL_STORAGE);
+            }
+        }
+
+        int accessMediaLocationCheck = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_MEDIA_LOCATION);
+
+        if (accessMediaLocationCheck != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.ACCESS_MEDIA_LOCATION)) {
+                showExplanation("Permission Needed", "The application needs access to your phone storage to function properly", Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_WRITE_EXTERNAL_STORAGE);
+            } else {
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.ACCESS_MEDIA_LOCATION}, REQUEST_ACCESS_MEDIA_LOCATION);
             }
         }
     }
@@ -181,48 +245,55 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     public boolean performConversion(String file_path){
+        final String relativeLocation = Environment.DIRECTORY_DCIM + File.separator + getApplicationContext().getResources().getString(R.string.app_name);
+        Log.d("APP FOLDER", relativeLocation);
+        boolean done = false;
         image = Imgcodecs.imread(file_path);
+        Log.d("INPUT FILE PATH", file_path + "");
+        Log.d("INPUT FILE PATH", Files.exists(Paths.get(file_path)) + "");
         Mat inverted = new Mat();
         Log.d("INVERTED", image.empty() + "");
-//        Imgcodecs
-        Imgproc.cvtColor(image, inverted, Imgproc.COLOR_RGB2GRAY);
-        Mat gaussian_blurred = new Mat();
-        Imgproc.GaussianBlur(inverted, gaussian_blurred,
-                new Size(21,21),0);
 
-        Mat final_image = new Mat();
-        Core.divide(inverted, gaussian_blurred, final_image, 256.0);
-        String file_name = new File(file_path).getName();
-        File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS); ;
-        String path = dir.getAbsolutePath();
+        if(!image.empty()){
+            Imgproc.cvtColor(image, inverted, Imgproc.COLOR_RGB2GRAY);
+            Mat gaussian_blurred = new Mat();
+            Imgproc.GaussianBlur(inverted, gaussian_blurred,
+                    new Size(21,21),0);
+            Mat final_image = new Mat();
+            Core.divide(inverted, gaussian_blurred, final_image, 256.0);
+            String file_name = new File(file_path).getName();
 
-        String app_folder_path = new File(file_path).getParentFile().getPath();
-        File app_folder = new File(file_path).getParentFile();
-        Log.d("APPFOLDER", app_folder_path);
+            String image_path = getApplicationFolder()
+                        + File.separator + getApplicationContext().getResources().getString(R.string.app_name)
+                        + " - " + file_name;
 
-        String image_path = app_folder_path + "/" +
-                getApplicationContext().getResources().getString(R.string.app_name) +
-                " - " + file_name;
+            Log.d("FILENAME", image_path);
+            done = Imgcodecs.imwrite(image_path, final_image);
 
-        Log.d("FILENAME", image_path);
-        boolean done = Imgcodecs.imwrite(image_path, final_image);
-
-
-        if(done){
-            Log.d("Done", "Success");
-            Log.d("File Path", image_path);
-            Uri file_uri = FileProvider.getUriForFile(getApplicationContext(),
-                    BuildConfig.APPLICATION_ID + ".provider",
-                    new File(image_path));
-            Intent intent = new Intent();
-            intent.setAction(Intent.ACTION_VIEW);
-            intent.setDataAndType(file_uri, "image/*");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(intent);
+            if(done){
+                Log.d("Done", "Success");
+                Log.d("File Path", image_path);
+                Uri file_uri = FileProvider.getUriForFile(getApplicationContext(),
+                        BuildConfig.APPLICATION_ID + ".provider",
+                        new File(image_path));
+//                Uri file_uri = Uri.fromFile(new File(image_path));
+//                Log.d("FILEURI", Uri.fromFile(new File(image_path)).toString());
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_VIEW);
+                intent.setDataAndType(file_uri, "image/*");
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(intent);
+            }
+            else{
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle(R.string.app_name);
+                builder.setMessage(R.string.sketch_not_genereted_message);
+                builder.setNeutralButton("Try again", null);
+                builder.show();
+            }
         }
-        else{
+        else {
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
             builder.setTitle(R.string.app_name);
             builder.setMessage(R.string.sketch_not_genereted_message);
@@ -233,7 +304,6 @@ public class MainActivity extends AppCompatActivity {
         return done;
 
     }
-
 
     public static String getPathFromUri(final Context context, final Uri uri) {
 
@@ -248,7 +318,7 @@ public class MainActivity extends AppCompatActivity {
                 final String type = split[0];
 
                 if ("primary".equalsIgnoreCase(type)) {
-                    return Environment.getExternalStorageDirectory() + "/" + split[1];
+                    return Environment.getExternalStorageDirectory() + File.separator + split[1];
                 }
 
                 // TODO handle non-primary volumes
@@ -350,4 +420,16 @@ public class MainActivity extends AppCompatActivity {
         return "com.android.providers.media.documents".equals(uri.getAuthority());
     }
 
+    public String getApplicationFolder(){
+        String folder_path = Environment.getExternalStorageDirectory().getAbsolutePath() +
+                File.separator + Environment.DIRECTORY_PICTURES + File.separator +
+                getApplicationContext().getResources().getString(R.string.app_name);
+
+        if(!(new File(folder_path).exists()))
+        {
+            new File(folder_path).mkdir();
+        }
+        return folder_path;
+
+    }
 }
