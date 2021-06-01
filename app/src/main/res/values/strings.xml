@@ -12,4 +12,5 @@
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
     <string name="sketch_not_genereted_message">Uh oh.. Looks like we could not process your image. May be you could try with another image</string>
     <string name="permissions_not_granted">Please provide the requested permission for the application to function</string>
+    <string name="title_activity_display_output">DisplayOutput</string>
 </resources>

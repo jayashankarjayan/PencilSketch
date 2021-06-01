@@ -40,8 +40,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -117,8 +115,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.Q){
-//                boolean conversion_done = performConversion(file_path);
-            Log.d("DOCURI", uri.toString());
             if(isExternalStorageDocument(uri)) {
                 file_path = getFilePath(uri);
                 performConversion(file_path);
