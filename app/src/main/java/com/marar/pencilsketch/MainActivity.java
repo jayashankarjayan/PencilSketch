@@ -1,12 +1,5 @@
 package com.marar.pencilsketch;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
-
 import android.Manifest;
 import android.content.ContentUris;
 import android.content.Context;
@@ -18,14 +11,19 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.storage.StorageManager;
-import android.os.storage.StorageVolume;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
@@ -97,36 +95,55 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PICK_IMAGE) {
             Uri uri = data.getData();
-            String file_path = null;
+            operatePostIntent(uri);
 
-            if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.Q){
-//                boolean conversion_done = performConversion(file_path);
-                Log.d("DOCURI", uri.toString());
-                if(isExternalStorageDocument(uri)) {
-                    file_path = getFilePath(uri);
-                    performConversion(file_path);
-                }
-                else{
-                    file_path = getPathFromUri(getApplicationContext(), uri);
-                    String file_name = new File(file_path).getName();
-                    String destination_path = Environment.getDataDirectory() + File.separator + file_name;
-                    try {
-                        copy(new File(file_path), new File(destination_path));
-                        performConversion(destination_path);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        Log.d("COPY FAIL", e.getMessage());
-                    }
-                }
+        }
+    }
+
+    private void operatePostIntent(Uri uri) {
+        String file_path = null;
+
+        Cursor cursor = null;
+        try {
+            String[] proj = { MediaStore.Images.Media.DATA };
+            cursor = getApplicationContext().getContentResolver().query(uri,  proj, null, null, null);
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            cursor.moveToFirst();
+            file_path =  cursor.getString(column_index);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
             }
-            else{
-                String temp_path = uri.getPath();
-                String document_id = temp_path.split(":")[1];
-                String storage = Environment.getExternalStorageDirectory().getAbsolutePath();
-                file_path = storage + File.separator + document_id;
+        }
+
+        if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.Q){
+//                boolean conversion_done = performConversion(file_path);
+            Log.d("DOCURI", uri.toString());
+            if(isExternalStorageDocument(uri)) {
+                file_path = getFilePath(uri);
                 performConversion(file_path);
             }
-
+            else{
+                String file_name = new File(file_path).getName();
+                String destination_path = Environment.getDataDirectory() + File.separator + file_name;
+                try {
+                    copy(new File(file_path), new File(destination_path));
+                    performConversion(destination_path);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.d("COPY FAIL", e.getMessage());
+                }
+            }
+        }
+        else{
+            String temp_path = uri.getPath();
+            String document_id = temp_path.split(":")[1];
+            String storage = Environment.getExternalStorageDirectory().getAbsolutePath();
+            file_path = storage + File.separator + document_id;
+            if(!(new File(file_path).exists())){
+                file_path = getFilePath(uri);
+            }
+            performConversion(file_path);
         }
     }
 
@@ -256,12 +273,7 @@ public class MainActivity extends AppCompatActivity {
         boolean done = false;
         image = Imgcodecs.imread(file_path);
 
-
-        Log.d("INPUT FILE PATH", file_path + "");
-        Log.d("INPUT FILE PATH", Files.exists(Paths.get(file_path)) + "");
         Mat inverted = new Mat();
-        Log.d("INVERTED", image.empty() + "");
-
         if(!image.empty()){
             Imgproc.cvtColor(image, inverted, Imgproc.COLOR_RGB2GRAY);
             Mat gaussian_blurred = new Mat();
@@ -275,20 +287,15 @@ public class MainActivity extends AppCompatActivity {
                         + File.separator + getApplicationContext().getResources().getString(R.string.app_name)
                         + " - " + file_name;
 
-            Log.d("FILENAME", image_path);
             done = Imgcodecs.imwrite(image_path, final_image);
 
             if(done){
                 Log.d("Done", "Success");
-                Log.d("File Path", image_path);
                 Uri file_uri = FileProvider.getUriForFile(getApplicationContext(),
                         BuildConfig.APPLICATION_ID + ".provider",
                         new File(image_path));
-//                Uri file_uri = Uri.fromFile(new File(image_path));
-//                Log.d("FILEURI", Uri.fromFile(new File(image_path)).toString());
 
                 new SingleMediaScanner(getApplicationContext(), new File(image_path));
-
 
                 Intent intent = new Intent();
                 intent.setAction(Intent.ACTION_VIEW);
