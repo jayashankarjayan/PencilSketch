@@ -297,10 +297,7 @@ public class MainActivity extends AppCompatActivity {
 //                Uri file_uri = Uri.fromFile(new File(image_path));
 //                Log.d("FILEURI", Uri.fromFile(new File(image_path)).toString());
 
-                final Intent scanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-
-                scanIntent.setData(file_uri);
-                sendBroadcast(scanIntent);
+                new SingleMediaScanner(getApplicationContext(), new File(image_path));
 
 
                 Intent intent = new Intent();
@@ -370,8 +367,15 @@ public class MainActivity extends AppCompatActivity {
             else if (isDownloadsDocument(uri)) {
 
                 final String id = DocumentsContract.getDocumentId(uri);
-                final Uri contentUri = ContentUris.withAppendedId(
-                        Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+                Uri contentUri = null;
+                try {
+                    contentUri = ContentUris.withAppendedId(
+                            Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+                }
+                catch (NumberFormatException e){
+                    contentUri =
+                    Uri.parse("content://downloads/public_downloads" + id);
+                }
 
                 return getDataColumn(context, contentUri, null, null);
             }
