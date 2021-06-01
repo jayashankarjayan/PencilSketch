@@ -18,6 +18,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -118,24 +120,12 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             else{
-                if(isExternalStorageDocument(uri)) {
-                    file_path = getFilePath(uri);
-
-                    performConversion(file_path);
-                }
-                else{
-                    file_path = getPathFromUri(getApplicationContext(), uri);
-                    performConversion(file_path);
-                }
-//                boolean conversion_done = performConversion(file_path);
+                String temp_path = uri.getPath();
+                String document_id = temp_path.split(":")[1];
+                String storage = Environment.getExternalStorageDirectory().getAbsolutePath();
+                file_path = storage + File.separator + document_id;
+                performConversion(file_path);
             }
-//
-//            if(file_path == null){
-//                file_path = uri.getPath();
-//                Log.d("PATH VALID", Files.exists(Paths.get(file_path))  + "");
-//            }
-            final String relativeLocation = Environment.DIRECTORY_DCIM + File.separator + getApplicationContext().getResources().getString(R.string.app_name);
-            Log.d("APP FOLDER", relativeLocation);
 
         }
     }
@@ -370,7 +360,7 @@ public class MainActivity extends AppCompatActivity {
                 Uri contentUri = null;
                 try {
                     contentUri = ContentUris.withAppendedId(
-                            Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+                            Uri.parse("content://downloads/public_downloads"), Long.parseLong(id));
                 }
                 catch (NumberFormatException e){
                     contentUri =
