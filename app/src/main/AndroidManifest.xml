@@ -16,10 +16,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PencilSketch">
-        <activity
-            android:name=".DisplayOutput"
-            android:label="@string/title_activity_display_output"
-            android:theme="@style/Theme.PencilSketch.NoActionBar"></activity>
+
+        <activity android:name=".DisplayOutput"/>
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

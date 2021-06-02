@@ -117,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
         if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.Q){
             if(isExternalStorageDocument(uri)) {
                 file_path = getFilePath(uri);
+                Log.d("SKJDFSD", new File(file_path).exists() + "");
                 performConversion(file_path);
             }
             else{
@@ -293,10 +294,8 @@ public class MainActivity extends AppCompatActivity {
 
                 new SingleMediaScanner(getApplicationContext(), new File(image_path));
 
-                Intent intent = new Intent();
-                intent.setAction(Intent.ACTION_VIEW);
-                intent.setDataAndType(file_uri, "image/*");
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                Intent intent = new Intent(this, DisplayOutput.class);
+                intent.putExtra("file_path", image_path);
                 startActivity(intent);
             }
             else{
