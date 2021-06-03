@@ -1,12 +1,15 @@
 package com.marar.pencilsketch;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,8 +18,8 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.Toast;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -24,6 +27,8 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
@@ -43,21 +48,29 @@ import java.io.OutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final int PICK_IMAGE = 1;
+    private static final int CREATE_PENCIL_SKETCH = 1;
+    private static final int DISPLAY_INPUT_IMAGE = 5;
     private static final int REQUEST_READ_EXTERNAL_STORAGE = 2;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 3;
     private static final int REQUEST_ACCESS_MEDIA_LOCATION = 4;
     Mat image = null;
-    Button select_image_button;
+    String selected_image_path = null;
+    ExtendedFloatingActionButton select_image_button;
+    ExtendedFloatingActionButton generate_sketch_button;
     ConstraintLayout constraintLayout;
+    ImageView input_image;
+    ProgressBar progress_circular;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        constraintLayout = (ConstraintLayout)findViewById(R.id.root_layout);
-        select_image_button = (Button)findViewById(R.id.select_image_button);
 
+        input_image = (ImageView)findViewById(R.id.input_image);
+        progress_circular = (ProgressBar)findViewById(R.id.progress_circular);
+        constraintLayout = (ConstraintLayout)findViewById(R.id.root_layout);
+        select_image_button = (ExtendedFloatingActionButton)findViewById(R.id.select_image_button);
+        generate_sketch_button = (ExtendedFloatingActionButton)findViewById(R.id.generate_sketch_button);
         requestStoragePermission();
 
         select_image_button.setOnClickListener(new View.OnClickListener() {
@@ -66,7 +79,26 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent();
                 intent.setType("image/*");
                 intent.setAction(Intent.ACTION_GET_CONTENT);
-                startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE);
+                startActivityForResult(Intent.createChooser(intent, "Select Picture"), DISPLAY_INPUT_IMAGE);
+            }
+        });
+
+        generate_sketch_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(input_image.getDrawable() == null || selected_image_path == null){
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                    builder.setTitle(R.string.app_name);
+                    builder.setMessage(R.string.select_an_image);
+                    builder.setNeutralButton(android.R.string.ok, null);
+                    builder.show();
+                }
+                else{
+                    progress_circular.setVisibility(View.VISIBLE);
+                    performConversion(selected_image_path);
+                    progress_circular.setVisibility(View.INVISIBLE
+                    );
+                }
             }
         });
     }
@@ -91,11 +123,79 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_IMAGE) {
+        if (requestCode == DISPLAY_INPUT_IMAGE) {
             Uri uri = data.getData();
-            operatePostIntent(uri);
+//            operatePostIntent(uri);
+            String file_path = getPathToImageForProcessing(uri);
+            selected_image_path = file_path;
 
+            if(file_path == null){
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle(R.string.app_name);
+                builder.setMessage(R.string.image_not_rendered_message);
+                builder.setNeutralButton(android.R.string.ok, null);
+                builder.show();
+            }
+            else{
+                if(!(new File(file_path).exists())){
+                    file_path = getPathFromUri(getApplicationContext(), uri);
+                    selected_image_path = file_path;
+                }
+                Bitmap bitmap = BitmapFactory.decodeFile(file_path);
+                input_image.setImageBitmap(bitmap);
+            }
         }
+    }
+
+    private String getPathToImageForProcessing(Uri uri) {
+        String file_path = null;
+
+        Cursor cursor = null;
+        try {
+            String[] proj = { MediaStore.Images.Media.DATA };
+            cursor = getApplicationContext().getContentResolver().query(uri,  proj, null, null, null);
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            cursor.moveToFirst();
+            file_path =  cursor.getString(column_index);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.Q){
+            if(isExternalStorageDocument(uri)) {
+                file_path = getFilePath(uri);
+            }
+            else{
+                String file_name = new File(file_path).getName();
+                String destination_path = Environment.getDataDirectory() + File.separator + file_name;
+                try {
+                    copy(new File(file_path), new File(destination_path));
+                    file_path = destination_path;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.d("COPY FAIL", e.getMessage());
+                }
+            }
+        }
+        else{
+            String temp_path = uri.getPath();
+            try{
+                String document_id = temp_path.split(":")[1];
+
+                String storage = Environment.getExternalStorageDirectory().getAbsolutePath();
+                file_path = storage + File.separator + document_id;
+                if(!(new File(file_path).exists())){
+                    file_path = getFilePath(uri);
+                }
+            }
+            catch(IndexOutOfBoundsException ind){
+                Log.d("ERR", ind.getMessage());
+            }
+        }
+
+        return file_path;
     }
 
     private void operatePostIntent(Uri uri) {
@@ -250,16 +350,16 @@ public class MainActivity extends AppCompatActivity {
             case REQUEST_READ_EXTERNAL_STORAGE:
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(MainActivity.this, "Read Permission Granted!", Toast.LENGTH_SHORT).show();
+                    Log.d("READ PERMISSION", "Read Permission Granted!");
                 } else {
-                    Toast.makeText(MainActivity.this, "Read Permission Denied!", Toast.LENGTH_SHORT).show();
+                    Log.d("READ PERMISSION", "Read Permission Denied!");
                 }
             case REQUEST_WRITE_EXTERNAL_STORAGE:
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(MainActivity.this, "Write Permission Granted!", Toast.LENGTH_SHORT).show();
+                    Log.d("WRITE PERMISSION", "Write Permission Granted!");
                 } else {
-                    Toast.makeText(MainActivity.this, "Write Permission Denied!", Toast.LENGTH_SHORT).show();
+                    Log.d("WRITE PERMISSION", "Write Permission Denied!");
                 }
         }
     }
@@ -285,7 +385,6 @@ public class MainActivity extends AppCompatActivity {
                         + " - " + file_name;
 
             done = Imgcodecs.imwrite(image_path, final_image);
-
             if(done){
                 Log.d("Done", "Success");
                 Uri file_uri = FileProvider.getUriForFile(getApplicationContext(),
@@ -301,7 +400,7 @@ public class MainActivity extends AppCompatActivity {
             else{
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle(R.string.app_name);
-                builder.setMessage(R.string.sketch_not_genereted_message);
+                builder.setMessage(R.string.sketch_not_generated_message);
                 builder.setNeutralButton("Try again", null);
                 builder.show();
             }
@@ -309,7 +408,7 @@ public class MainActivity extends AppCompatActivity {
         else {
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
             builder.setTitle(R.string.app_name);
-            builder.setMessage(R.string.sketch_not_genereted_message);
+            builder.setMessage(R.string.sketch_not_generated_message);
             builder.setNeutralButton("Try again", null);
             builder.show();
         }

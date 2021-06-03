@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.FileProvider;
@@ -44,7 +45,7 @@ public class DisplayOutput extends AppCompatActivity {
         ExtendedFloatingActionButton delete_button = (ExtendedFloatingActionButton) findViewById(R.id.delete_button);
 
         output_image.setImageBitmap(bitmap);
-        Snackbar.make(output_root, R.string.image_generated_message, Snackbar.LENGTH_LONG)
+        Snackbar.make(output_image, R.string.image_generated_message, Snackbar.LENGTH_LONG)
                 .show();
 
         share_button.setOnClickListener(new View.OnClickListener() {
@@ -76,6 +77,8 @@ public class DisplayOutput extends AppCompatActivity {
 
                         File file = new File(file_path);
                         file.delete();
+                        new SingleMediaScanner(getApplicationContext(), file);
+                        Toast.makeText(getApplicationContext(), R.string.image_deleted_message, Toast.LENGTH_SHORT);
                         finish();
                     }
                 });
