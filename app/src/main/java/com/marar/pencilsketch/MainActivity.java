@@ -168,14 +168,8 @@ public class MainActivity extends AppCompatActivity {
                 file_path = getFilePath(uri);
             }
             else{
-                String file_name = new File(file_path).getName();
-                String destination_path = Environment.getDataDirectory() + File.separator + file_name;
-                try {
-                    copy(new File(file_path), new File(destination_path));
-                    file_path = destination_path;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Log.d("COPY FAIL", e.getMessage());
+                if(file_path == null){
+                    file_path = getFilePath(uri);
                 }
             }
         }
@@ -224,8 +218,18 @@ public class MainActivity extends AppCompatActivity {
                 String file_name = new File(file_path).getName();
                 String destination_path = Environment.getDataDirectory() + File.separator + file_name;
                 try {
-                    copy(new File(file_path), new File(destination_path));
-                    performConversion(destination_path);
+                    File source_file = new File(file_path);
+                    if (source_file.exists()){
+                        copy(source_file, new File(destination_path));
+                        performConversion(destination_path);
+                    }
+                    else{
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                        builder.setTitle(R.string.app_name);
+                        builder.setMessage(R.string.image_not_rendered_message);
+                        builder.setNeutralButton(android.R.string.ok, null);
+                        builder.show();
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                     Log.d("COPY FAIL", e.getMessage());
@@ -370,8 +374,10 @@ public class MainActivity extends AppCompatActivity {
         boolean done = false;
         image = Imgcodecs.imread(file_path);
 
+        Log.d("IMAGEEXIST", new File(file_path).exists() + "");
         Mat inverted = new Mat();
         if(!image.empty()){
+            Log.d("IMAGE EMPTY STATUS", image.empty() + "");
             Imgproc.cvtColor(image, inverted, Imgproc.COLOR_RGB2GRAY);
             Mat gaussian_blurred = new Mat();
             Imgproc.GaussianBlur(inverted, gaussian_blurred,

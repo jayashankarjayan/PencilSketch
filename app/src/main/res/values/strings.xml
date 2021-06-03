@@ -9,12 +9,12 @@
     <string name="delete_image">Delete Image</string>
     <string name="share_image">Share Image</string>
 
-    <string name="sketch_not_generated_message">Uh oh.. Looks like we could not process your image. May be you could try with another image</string>
+    <string name="sketch_not_generated_message">Uh oh.. Looks like we could not process your image at the moment. May be you could try with another image</string>
     <string name="permissions_not_granted">Please provide the requested permission for the application to function</string>
     <string name="title_activity_display_output">DisplayOutput</string>
     <string name="image_generated_message">Pencil Sketch Generated Successfully</string>
     <string name="delete_image_question">Do you want to delete this image?</string>
     <string name="image_deleted_message">Image deleted</string>
     <string name="image_not_rendered_message">Could not display selected image. Please try a different image</string>
-    <string name="select_an_image">Please select an image frist</string>
+    <string name="select_an_image">Please select an image first</string>
 </resources>
