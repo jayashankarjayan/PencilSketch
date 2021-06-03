@@ -6,6 +6,7 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -53,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_READ_EXTERNAL_STORAGE = 2;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 3;
     private static final int REQUEST_ACCESS_MEDIA_LOCATION = 4;
+    private static final String MY_PREFERENCES = "MyPreferences";
+    private static final String HAS_RESTARTED = "has_restarted";
     Mat image = null;
     String selected_image_path = null;
     ExtendedFloatingActionButton select_image_button;
@@ -60,11 +63,18 @@ public class MainActivity extends AppCompatActivity {
     ConstraintLayout constraintLayout;
     ImageView input_image;
     ProgressBar progress_circular;
+    SharedPreferences sharedpreferences;
+    SharedPreferences.Editor editor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        sharedpreferences = getSharedPreferences(MY_PREFERENCES, Context.MODE_PRIVATE);
+        editor = sharedpreferences.edit();
+        editor.putBoolean(HAS_RESTARTED, false);
+
 
         input_image = (ImageView)findViewById(R.id.input_image);
         progress_circular = (ProgressBar)findViewById(R.id.progress_circular);
@@ -362,6 +372,13 @@ public class MainActivity extends AppCompatActivity {
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.d("WRITE PERMISSION", "Write Permission Granted!");
+                    if(!sharedpreferences.getBoolean(HAS_RESTARTED, false)){
+                        Intent intent = getIntent();
+                        editor.putBoolean(HAS_RESTARTED, true);
+                        editor.commit();
+                        finish();
+                        startActivity(intent);
+                    }
                 } else {
                     Log.d("WRITE PERMISSION", "Write Permission Denied!");
                 }
@@ -401,6 +418,7 @@ public class MainActivity extends AppCompatActivity {
 
                 Intent intent = new Intent(this, DisplayOutput.class);
                 intent.putExtra("file_path", image_path);
+                input_image.setImageDrawable(null);
                 startActivity(intent);
             }
             else{
