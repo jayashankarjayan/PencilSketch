@@ -148,11 +148,27 @@ public class MainActivity extends AppCompatActivity {
             }
             else{
                 if(!(new File(file_path).exists())){
-                    file_path = getPathFromUri(getApplicationContext(), uri);
-                    selected_image_path = file_path;
+                    try{
+                        file_path = getPathFromUri(getApplicationContext(), uri);
+                        selected_image_path = file_path;
+                    }
+                    catch (IllegalArgumentException exception){
+                        Log.d("GETPATHRUI ERR", exception.getMessage());
+                        Log.d("GETPATHRUI ERR", uri.getPath());
+
+                        file_path = uri.toString();
+                    }
                 }
                 Bitmap bitmap = BitmapFactory.decodeFile(file_path);
-                input_image.setImageBitmap(bitmap);
+                if(bitmap == null){
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                    builder.setTitle(R.string.app_name);
+                    builder.setMessage(R.string.image_not_rendered_message);
+                    builder.setNeutralButton(android.R.string.ok, null);
+                    builder.show();
+                }else{
+                    input_image.setImageBitmap(bitmap);
+                }
             }
         }
     }
@@ -176,9 +192,12 @@ public class MainActivity extends AppCompatActivity {
         if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.Q){
             if(isExternalStorageDocument(uri)) {
                 file_path = getFilePath(uri);
+                if(!(new File(file_path).exists())){
+                    file_path = getFilePath(uri);
+                }
             }
             else{
-                if(file_path == null){
+                if(file_path == null || !(new File(file_path).exists())){
                     file_path = getFilePath(uri);
                 }
             }
