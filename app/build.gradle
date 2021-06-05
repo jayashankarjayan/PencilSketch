@@ -10,10 +10,11 @@ android {
         applicationId "com.marar.pencilsketch"
         minSdkVersion 23
         targetSdkVersion 30
-        versionCode 10
+        versionCode 12
         versionName "1.0"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test" +
+                ".runner.AndroidJUnitRunner"
     }
 
     buildTypes {
