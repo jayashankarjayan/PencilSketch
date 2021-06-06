@@ -17,6 +17,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PencilSketch">
 
+        <meta-data
+            android:name="com.google.android.gms.ads.com.marar.pencilsketch"
+            android:value="ca-app-pub-2422524513973606~3584544026"/>
+
         <activity android:name=".DisplayOutput"/>
 
         <activity android:name=".MainActivity">

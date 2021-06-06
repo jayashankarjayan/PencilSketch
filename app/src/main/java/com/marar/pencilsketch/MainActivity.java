@@ -17,10 +17,12 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.text.Html;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -43,6 +45,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -88,6 +91,10 @@ public class MainActivity extends AppCompatActivity {
         constraintLayout = (ConstraintLayout)findViewById(R.id.root_layout);
         select_image_button = (ExtendedFloatingActionButton)findViewById(R.id.select_image_button);
         generate_sketch_button = (ExtendedFloatingActionButton)findViewById(R.id.generate_sketch_button);
+        TextView starter_textview = (TextView)findViewById(R.id.starter_textview);
+        String textview_content = "<u>" + getApplicationContext().getResources().getString(R.string.app_name)
+                + "</u><br/><strong>SELECT IMAGE</strong><br/>to get started";
+        starter_textview.setText(Html.fromHtml(textview_content));
         requestStoragePermission();
 
         select_image_button.setOnClickListener(new View.OnClickListener() {
@@ -141,41 +148,49 @@ public class MainActivity extends AppCompatActivity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == DISPLAY_INPUT_IMAGE) {
-            Uri uri = data.getData();
-//            operatePostIntent(uri);
-            String file_path = getPathToImageForProcessing(uri);
-            selected_image_path = file_path;
+            try {
+                Uri uri = data.getData();
+                //            operatePostIntent(uri);
+                String file_path = getPathToImageForProcessing(uri);
+                selected_image_path = file_path;
 
-            if(file_path == null){
-                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                builder.setTitle(R.string.app_name);
-                builder.setMessage(R.string.image_not_rendered_message);
-                builder.setNeutralButton(android.R.string.ok, null);
-                builder.show();
-            }
-            else{
-                if(!(new File(file_path).exists())){
-                    try{
-                        file_path = getPathFromUri(getApplicationContext(), uri);
-                        selected_image_path = file_path;
-                    }
-                    catch (IllegalArgumentException exception){
-                        Log.d("GETPATHRUI ERR", exception.getMessage());
-                        Log.d("GETPATHRUI ERR", uri.getPath());
-
-                        file_path = uri.toString();
-                    }
-                }
-                Bitmap bitmap = BitmapFactory.decodeFile(file_path);
-                if(bitmap == null){
+                if (file_path == null) {
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                     builder.setTitle(R.string.app_name);
                     builder.setMessage(R.string.image_not_rendered_message);
                     builder.setNeutralButton(android.R.string.ok, null);
                     builder.show();
-                }else{
-                    input_image.setImageBitmap(bitmap);
+                } else {
+                    if (!(new File(file_path).exists())) {
+                        try {
+                            file_path = getPathFromUri(getApplicationContext(), uri);
+                            selected_image_path = file_path;
+                        } catch (IllegalArgumentException exception) {
+                            Log.d("GETPATHRUI ERR", exception.getMessage());
+                            Log.d("GETPATHRUI ERR", uri.getPath());
+
+                            file_path = uri.toString();
+                        }
+                    }
+                    Bitmap bitmap = BitmapFactory.decodeFile(file_path);
+                    if (bitmap == null) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                        builder.setTitle(R.string.app_name);
+                        builder.setMessage(R.string.image_not_rendered_message);
+                        builder.setNeutralButton(android.R.string.ok, null);
+                        builder.show();
+                    } else {
+                        input_image.setImageBitmap(bitmap);
+                    }
                 }
+            }
+            catch (NullPointerException nullPointerException){
+                Log.d("NULLPOINTER ERROR", nullPointerException.getMessage());
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle(R.string.app_name);
+                builder.setMessage(R.string.image_not_rendered_message);
+                builder.setNeutralButton(android.R.string.ok, null);
+                builder.show();
             }
         }
     }
