@@ -73,8 +73,11 @@ public class MainActivity extends AppCompatActivity {
     ConstraintLayout constraintLayout;
     ImageView input_image;
     ProgressBar progress_circular;
+    TextView starter_textview;
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;
+
+    String textview_content = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,15 +88,14 @@ public class MainActivity extends AppCompatActivity {
         editor = sharedpreferences.edit();
         editor.putBoolean(HAS_RESTARTED, false);
 
-
+        textview_content = "<u>" + getApplicationContext().getResources().getString(R.string.app_name)
+                + "</u><br/><strong>SELECT IMAGE</strong><br/>to get started";
         input_image = (ImageView)findViewById(R.id.input_image);
         progress_circular = (ProgressBar)findViewById(R.id.progress_circular);
         constraintLayout = (ConstraintLayout)findViewById(R.id.root_layout);
         select_image_button = (ExtendedFloatingActionButton)findViewById(R.id.select_image_button);
         generate_sketch_button = (ExtendedFloatingActionButton)findViewById(R.id.generate_sketch_button);
-        TextView starter_textview = (TextView)findViewById(R.id.starter_textview);
-        String textview_content = "<u>" + getApplicationContext().getResources().getString(R.string.app_name)
-                + "</u><br/><strong>SELECT IMAGE</strong><br/>to get started";
+        starter_textview = (TextView)findViewById(R.id.starter_textview);
         starter_textview.setText(Html.fromHtml(textview_content));
         requestStoragePermission();
 
@@ -180,6 +182,7 @@ public class MainActivity extends AppCompatActivity {
                         builder.setNeutralButton(android.R.string.ok, null);
                         builder.show();
                     } else {
+                        starter_textview.setText("");
                         input_image.setImageBitmap(bitmap);
                     }
                 }
@@ -459,6 +462,9 @@ public class MainActivity extends AppCompatActivity {
 
                 Intent intent = new Intent(this, DisplayOutput.class);
                 intent.putExtra("file_path", image_path);
+                intent.putExtra("original_file", file_path);
+
+                starter_textview.setText(Html.fromHtml(textview_content));
                 input_image.setImageDrawable(null);
                 startActivity(intent);
             }

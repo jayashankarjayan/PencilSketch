@@ -17,4 +17,7 @@
     <string name="image_deleted_message">Image deleted</string>
     <string name="image_not_rendered_message">Could not display selected image. Please try a different image.\nIf the problem persists, feel free to reach out to us at: jayashankar.marar@gmail.com</string>
     <string name="select_an_image">Please select an image first</string>
+    <string name="app_intro_screen_text">PencilSketchMaker\n`Select` an Image\nto Get Started</string>
+    <string name="label_adjust_picture_clarity">Adjust Picture Clarity</string>
+    <string name="user_selected_image">User selected image</string>
 </resources>
